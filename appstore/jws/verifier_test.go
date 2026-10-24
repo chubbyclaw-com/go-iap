@@ -141,3 +141,14 @@ func TestRejectNullPayload(t *testing.T) {
 	var dst map[string]interface{}
 	require.Error(t, v.Verify(f.sign(t, jwt.SigningMethodES256, nil), &dst))
 }
+
+func TestES256RequiresP256Leaf(t *testing.T) {
+	f := makeFixture(t, true, true, elliptic.P384())
+	token := jwt.NewWithClaims(jwt.SigningMethodES384, jwt.MapClaims{"signedDate": testDate.UnixMilli()})
+	token.Header["x5c"] = f.chain
+	token.Header["alg"] = "ES256"
+	signed, err := token.SignedString(f.key)
+	require.NoError(t, err)
+	var dst map[string]interface{}
+	require.ErrorContains(t, f.verifier().Verify(signed, &dst), "P-256")
+}
