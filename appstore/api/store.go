@@ -1,13 +1,10 @@
-//go:generate mockgen -destination=../mocks/store.go -package=mocks github.com/awa/go-iap/appstore/api StoreAPIClient
+//go:generate mockgen -destination=../mocks/store.go -package=mocks github.com/chubbyclaw-com/go-iap/appstore/api StoreAPIClient
 
 package api
 
 import (
 	"bytes"
 	"context"
-	"crypto/ecdsa"
-	"crypto/x509"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/chubbyclaw-com/go-iap/appstore/jws"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -126,7 +124,6 @@ type (
 type StoreClient struct {
 	Token   *Token
 	httpCli *http.Client
-	cert    *Cert
 	host    string
 }
 
@@ -137,7 +134,6 @@ func NewStoreClient(config *StoreConfig) *StoreClient {
 
 	client := &StoreClient{
 		Token: token,
-		cert:  &Cert{},
 		httpCli: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -153,7 +149,6 @@ func NewStoreClientWithHTTPClient(config *StoreConfig, httpClient *http.Client) 
 
 	client := &StoreClient{
 		Token:   token,
-		cert:    &Cert{},
 		httpCli: httpClient,
 		host:    getHost(config.Sandbox, config.HostDebug),
 	}
@@ -600,9 +595,10 @@ func (a *StoreClient) ParseSignedTransactions(transactions []string) ([]*JWSTran
 	result := make([]*JWSTransaction, 0)
 	for _, v := range transactions {
 		trans, err := a.ParseSignedTransaction(v)
-		if err == nil && trans != nil {
-			result = append(result, trans)
+		if err != nil {
+			return nil, err
 		}
+		result = append(result, trans)
 	}
 
 	return result, nil
@@ -610,68 +606,25 @@ func (a *StoreClient) ParseSignedTransactions(transactions []string) ([]*JWSTran
 
 // ParseJWSEncodeString parse the jws encode string, such as JWSTransaction and JWSRenewalInfoDecodedPayload
 func (a *StoreClient) ParseJWSEncodeString(jwsEncode string) (interface{}, error) {
-	// Split the JWS format string into its three parts
-	parts := strings.Split(jwsEncode, ".")
-
-	// Decode the payload part of the JWS format string
-	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
-	if err != nil {
+	var payload map[string]json.RawMessage
+	if err := jws.NewVerifier(jws.Config{}).Verify(jwsEncode, &payload); err != nil {
 		return nil, err
 	}
-
-	// Determine which struct to use based on the payload contents
-	if strings.Contains(string(payload), "transactionId") {
-		transaction := &JWSTransaction{}
-		err = a.parseJWS(jwsEncode, transaction)
-		return transaction, err
-	} else if strings.Contains(string(payload), "renewalDate") {
-		renewalInfo := &JWSRenewalInfoDecodedPayload{}
-		err = a.parseJWS(jwsEncode, renewalInfo)
-		return renewalInfo, err
+	if _, ok := payload["transactionId"]; ok {
+		return a.ParseSignedTransaction(jwsEncode)
 	}
-
-	return nil, nil
+	if _, ok := payload["autoRenewStatus"]; ok {
+		renewal := &JWSRenewalInfoDecodedPayload{}
+		if err := a.parseJWS(jwsEncode, renewal); err != nil {
+			return nil, err
+		}
+		return renewal, nil
+	}
+	return nil, fmt.Errorf("appstore unsupported signed payload")
 }
 
-func (a *StoreClient) parseJWS(jwsEncode string, claims jwt.Claims) error {
-	rootCertBytes, err := a.cert.extractCertByIndex(jwsEncode, 2)
-	if err != nil {
-		return err
-	}
-	rootCert, err := x509.ParseCertificate(rootCertBytes)
-	if err != nil {
-		return fmt.Errorf("appstore failed to parse root certificate")
-	}
-
-	intermediaCertBytes, err := a.cert.extractCertByIndex(jwsEncode, 1)
-	if err != nil {
-		return err
-	}
-	intermediaCert, err := x509.ParseCertificate(intermediaCertBytes)
-	if err != nil {
-		return fmt.Errorf("appstore failed to parse intermediate certificate")
-	}
-
-	leafCertBytes, err := a.cert.extractCertByIndex(jwsEncode, 0)
-	if err != nil {
-		return err
-	}
-	leafCert, err := x509.ParseCertificate(leafCertBytes)
-	if err != nil {
-		return fmt.Errorf("appstore failed to parse leaf certificate")
-	}
-	if err = a.cert.verifyCert(rootCert, intermediaCert, leafCert); err != nil {
-		return err
-	}
-
-	pk, ok := leafCert.PublicKey.(*ecdsa.PublicKey)
-	if !ok {
-		return fmt.Errorf("appstore public key must be of type ecdsa.PublicKey")
-	}
-
-	_, err = jwt.ParseWithClaims(jwsEncode, claims, func(token *jwt.Token) (interface{}, error) {
-		return pk, nil
-	})
+func (a *StoreClient) parseJWS(encoded string, claims jwt.Claims) error {
+	_, err := jws.NewVerifier(jws.Config{}).ParseWithClaims(encoded, claims)
 	return err
 }
 

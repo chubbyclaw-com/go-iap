@@ -17,7 +17,7 @@ import (
 	"google.golang.org/api/option"
 )
 
-//go:generate mockgen  -destination=mocks/playstore.go -package=mocks github.com/awa/go-iap/playstore IABProduct,IABProductV2,IABSubscription,IABSubscriptionV2,IABMonetization,IABOrder
+//go:generate mockgen  -destination=mocks/playstore.go -package=mocks github.com/chubbyclaw-com/go-iap/playstore IABProduct,IABProductV2,IABSubscription,IABSubscriptionV2,IABMonetization,IABOrder
 
 // The IABProduct type is an interface for product service
 type IABProduct interface {

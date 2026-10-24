@@ -1,4 +1,4 @@
-//go:generate mockgen  -destination=mocks/appstore.go -package=mocks github.com/awa/go-iap/appstore IAPClient
+//go:generate mockgen  -destination=mocks/appstore.go -package=mocks github.com/chubbyclaw-com/go-iap/appstore IAPClient
 
 package appstore
 
@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/chubbyclaw-com/go-iap/appstore/jws"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -194,23 +195,19 @@ func (c *Client) parseResponse(resp *http.Response, result interface{}, ctx cont
 
 // ParseNotificationV2 parse notification from App Store Server
 func (c *Client) ParseNotificationV2(tokenStr string, result *jwt.Token) error {
-	cert := Cert{}
-
-	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-		return cert.ExtractPublicKeyFromToken(tokenStr)
-	})
-	if token != nil {
-		*result = *token
+	if result == nil {
+		return fmt.Errorf("appstore nil token destination")
 	}
-	return err
+	token, err := jws.NewVerifier(jws.Config{}).ParseWithClaims(tokenStr, jwt.MapClaims{})
+	if err != nil {
+		return err
+	}
+	*result = *token
+	return nil
 }
 
-// ParseNotificationV2WithClaim parse notification from App Store Server
+// ParseNotificationV2WithClaim parses a verified App Store signed payload.
 func (c *Client) ParseNotificationV2WithClaim(tokenStr string, result jwt.Claims) error {
-	cert := Cert{}
-
-	_, err := jwt.ParseWithClaims(tokenStr, result, func(token *jwt.Token) (interface{}, error) {
-		return cert.ExtractPublicKeyFromToken(tokenStr)
-	})
+	_, err := jws.NewVerifier(jws.Config{}).ParseWithClaims(tokenStr, result)
 	return err
 }

@@ -1,4 +1,4 @@
-module github.com/awa/go-iap
+module github.com/chubbyclaw-com/go-iap
 
 go 1.26.0
 

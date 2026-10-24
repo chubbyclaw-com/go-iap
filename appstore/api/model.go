@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/awa/go-iap/appstore"
+	"github.com/chubbyclaw-com/go-iap/appstore"
 	"github.com/golang-jwt/jwt/v5"
 )
 

@@ -2,9 +2,11 @@ on:
   push:
     branches:
       - master
+      - chubbyclaw-iap
   pull_request:
     branches:
       - master
+      - chubbyclaw-iap
 name: unit test
 jobs:
   test:

@@ -2,27 +2,46 @@ go-iap
 ======
 
 ![](https://img.shields.io/badge/golang-1.26+-blue.svg?style=flat)
-[![unit test](https://github.com/awa/go-iap/actions/workflows/unit_test.yml/badge.svg)](https://github.com/awa/go-iap/actions/workflows/unit_test.yml)
+[![unit test](https://github.com/chubbyclaw-com/go-iap/actions/workflows/unit_test.yml/badge.svg)](https://github.com/chubbyclaw-com/go-iap/actions/workflows/unit_test.yml)
 
 >go-iap verifies the purchase receipt via AppStore, GooglePlayStore, Amazon AppStore, HMS or MicrosoftStore.
 
 Current API Documents:
 
-* AppStore: [![GoDoc](https://godoc.org/github.com/awa/go-iap/appstore?status.svg)](https://godoc.org/github.com/awa/go-iap/appstore)
-* AppStore Server API: [![GoDoc](https://godoc.org/github.com/awa/go-iap/appstore?status.svg)](https://godoc.org/github.com/awa/go-iap/appstore/api)
-* GooglePlay: [![GoDoc](https://godoc.org/github.com/awa/go-iap/playstore?status.svg)](https://godoc.org/github.com/awa/go-iap/playstore)
-* Amazon AppStore: [![GoDoc](https://godoc.org/github.com/awa/go-iap/amazon?status.svg)](https://godoc.org/github.com/awa/go-iap/amazon)
-* Huawei HMS: [![GoDoc](https://godoc.org/github.com/awa/go-iap/hms?status.svg)](https://godoc.org/github.com/awa/go-iap/hms)
-* Microsoft Store: [![GoDoc](https://godoc.org/github.com/awa/go-iap/microsoftstore?status.svg)](https://godoc.org/github.com/awa/go-iap/microsoftstore)
+* AppStore: [![GoDoc](https://godoc.org/github.com/chubbyclaw-com/go-iap/appstore?status.svg)](https://godoc.org/github.com/chubbyclaw-com/go-iap/appstore)
+* AppStore Server API: [![GoDoc](https://godoc.org/github.com/chubbyclaw-com/go-iap/appstore?status.svg)](https://godoc.org/github.com/chubbyclaw-com/go-iap/appstore/api)
+* GooglePlay: [![GoDoc](https://godoc.org/github.com/chubbyclaw-com/go-iap/playstore?status.svg)](https://godoc.org/github.com/chubbyclaw-com/go-iap/playstore)
+* Amazon AppStore: [![GoDoc](https://godoc.org/github.com/chubbyclaw-com/go-iap/amazon?status.svg)](https://godoc.org/github.com/chubbyclaw-com/go-iap/amazon)
+* Huawei HMS: [![GoDoc](https://godoc.org/github.com/chubbyclaw-com/go-iap/hms?status.svg)](https://godoc.org/github.com/chubbyclaw-com/go-iap/hms)
+* Microsoft Store: [![GoDoc](https://godoc.org/github.com/chubbyclaw-com/go-iap/microsoftstore?status.svg)](https://godoc.org/github.com/chubbyclaw-com/go-iap/microsoftstore)
 
+
+## Maintained fork
+
+This module is maintained by chubbyclaw-com and is based on
+[awa/go-iap v1.59.0](https://github.com/awa/go-iap/tree/v1.59.0).
+Upstream history, MIT license, legacy receipt support and all store providers are retained.
+Our maintenance scope is centralized offline StoreKit 2 JWS verification and
+App Store Server API integration. The maintained branch is `chubbyclaw-iap`.
+Pin an immutable commit-derived Go module version when consuming this branch.
+
+`appstore/jws.NewVerifier(jws.Config{})` trusts Apple Root CA G3. It verifies
+ES256/P-256, certificate chains and Apple purpose OIDs, certificate validity at
+`signedDate` (or the configured clock when absent), and the JWS signature before decoding.
+The offline effective-date policy follows [Apple’s verifier](https://github.com/apple/app-store-server-library-node/blob/main/jws_verification.ts); a signed date ahead of the local clock is not rejected solely for clock skew. Explicit roots and clocks
+support deterministic offline tests. This offline verifier does not perform
+OCSP/revocation checks. Applications must still validate bundle/app identity,
+environment, account ownership and subscription status for their use case.
+Malformed and unknown signed payloads return errors; batch transaction parsing
+returns an error instead of silently discarding invalid entries.
 
 # Installation
 ```
-go get github.com/awa/go-iap/appstore
-go get github.com/awa/go-iap/playstore
-go get github.com/awa/go-iap/amazon
-go get github.com/awa/go-iap/hms
-go get github.com/awa/go-iap/microsoftstore
+go get github.com/chubbyclaw-com/go-iap/appstore@chubbyclaw-iap
+go get github.com/chubbyclaw-com/go-iap/playstore@chubbyclaw-iap
+go get github.com/chubbyclaw-com/go-iap/amazon@chubbyclaw-iap
+go get github.com/chubbyclaw-com/go-iap/hms@chubbyclaw-iap
+go get github.com/chubbyclaw-com/go-iap/microsoftstore@chubbyclaw-iap
 ```
 
 
@@ -32,7 +51,7 @@ go get github.com/awa/go-iap/microsoftstore
 
 ```go
 import(
-    "github.com/awa/go-iap/appstore"
+    "github.com/chubbyclaw-com/go-iap/appstore"
 )
 
 func main() {
@@ -52,7 +71,7 @@ func main() {
 
 ```go
 import(
-    "github.com/awa/go-iap/playstore"
+    "github.com/chubbyclaw-com/go-iap/playstore"
 )
 
 func main() {
@@ -73,7 +92,7 @@ func main() {
 
 ```go
 import(
-    "github.com/awa/go-iap/amazon"
+    "github.com/chubbyclaw-com/go-iap/amazon"
 )
 
 func main() {
@@ -88,7 +107,7 @@ func main() {
 
 ```go
 import(
-    "github.com/awa/go-iap/hms"
+    "github.com/chubbyclaw-com/go-iap/hms"
 )
 
 func main() {
@@ -119,7 +138,7 @@ An app distributed through App Review or TestFlight is a production build whose 
 
 ```go
 import(
-	"github.com/awa/go-iap/appstore/api"
+	"github.com/chubbyclaw-com/go-iap/appstore/api"
 )
 
 func main() {
@@ -157,7 +176,7 @@ Nothing else is retried. `401` is overloaded, so reach for this client only wher
 
 ```go
 import(
-	"github.com/awa/go-iap/appstore/api"
+	"github.com/chubbyclaw-com/go-iap/appstore/api"
 )
 
 //  For generate key file and download it, please refer to https://developer.apple.com/documentation/appstoreserverapi/creating_api_keys_to_use_with_the_app_store_server_api
@@ -194,7 +213,7 @@ func main() {
 
 ```go
 import(
-	"github.com/awa/go-iap/appstore/api"
+	"github.com/chubbyclaw-com/go-iap/appstore/api"
 )
 
 //  For generate key file and download it, please refer to https://developer.apple.com/documentation/appstoreserverapi/creating_api_keys_to_use_with_the_app_store_server_api
@@ -233,7 +252,7 @@ func main() {
 
 ```go
 import (
-	"github.com/awa/go-iap/appstore"
+	"github.com/chubbyclaw-com/go-iap/appstore"
 	"github.com/golang-jwt/jwt/v5"
 )
 
